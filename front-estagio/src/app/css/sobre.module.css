@@ -1,0 +1,33 @@
+.page {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .header {
+    background-color: #0070f3;
+    padding: 1rem;
+  }
+  
+  .navList {
+    list-style: none;
+    display: flex;
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .navList li a {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+  }
+  
+  .main {
+    padding: 2rem;
+  }
+  
+  h1 {
+    color: #0070f3;
+  }
+  

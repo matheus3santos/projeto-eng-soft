@@ -2,14 +2,17 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const sequelize = require('./src/database/connection'); // Conexão com o banco
 const estagioRoutes = require('./src/routes/estagios'); // Rotas de estágios
+const cors = require("cors"); // Importa a biblioteca cors
+
 
 const app = express();
-const PORT = 3000;
+const PORT = 3001;
 
 // Middleware para parsear JSON
 app.use(bodyParser.json());
 
 // Rotas
+app.use(cors({ origin: "http://localhost:3000" })); // Permite apenas o front-end local
 app.use('/api/estagios', estagioRoutes);
 
 // Sincronizar o banco e iniciar o servidor
