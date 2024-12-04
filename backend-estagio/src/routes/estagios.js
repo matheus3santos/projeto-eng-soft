@@ -1,11 +1,19 @@
 const express = require('express');
-const router = express.Router();
-const estagioController = require('../controllers/estagioController');
+const { criarEstagio, listarEstagios, atualizarEstagio, excluirEstagio } = require('../controllers/estagioController');
 
-// CRUD para estágios
-router.get('/', estagioController.listar);
-router.post('/', estagioController.criar);
-router.put('/:id', estagioController.editar);
-router.delete('/:id', estagioController.deletar);
+
+const router = express.Router();
+
+// Rota para criar um novo estágio
+router.post('/', criarEstagio);
+
+// Rota para listar todos os estágios
+router.get('/', listarEstagios);
+
+// Rota para atualizar um estágio (PUT)
+router.put('/:id', atualizarEstagio);
+
+// Rota para excluir um estágio (DELETE)
+router.delete('/:id', excluirEstagio);
 
 module.exports = router;
