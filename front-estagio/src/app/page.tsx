@@ -102,11 +102,20 @@ export default function Estagio() {
       setEstagios((prevEstagios) => prevEstagios.filter((estagio) => estagio.id !== id));
     });
 
-    // Limpa a conexão ao WebSocket ao desmontar o componente
+    // Desconectar o socket após 3 minutos (180.000 milissegundos)
+    const disconnectTimer = setTimeout(() => {
+      socket.disconnect();
+    }, 180000); // 3 minutos em milissegundos
+
+    // Limpa a conexão ao WebSocket ao desmontar o componente ou após o tempo limite
     return () => {
+      clearTimeout(disconnectTimer); // Limpar o timer para não desconectar antes do esperado
       socket.disconnect();
     };
   }, []);
+
+
+
 
   return (
 
