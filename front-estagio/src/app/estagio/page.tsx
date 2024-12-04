@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import styles from "../css/estagio.module.css";
 import Header from "@/components/headerBar";
 import EditForm from "@/components/editTemplate";
+import io from 'socket.io-client'; // Importa o socket.io-client
+
+
 
 
 
@@ -107,6 +110,35 @@ export default function Estagio() {
   const handleCloseEditForm = () => {
     setEditingEstagio(null); // Fecha o formulário de edição sem salvar
   };
+
+  useEffect(() => {
+    // Conecta ao servidor WebSocket
+    const socket = io('http://localhost:3001');
+
+    // Ouve pelo evento "estagio criado"
+    socket.on('estagio criado', (novoEstagio) => {
+      setEstagios((prevEstagios) => [novoEstagio, ...prevEstagios]);
+    });
+
+    // Ouve pelo evento "estagio atualizado"
+    socket.on('estagio atualizado', (updatedEstagio) => {
+      setEstagios((prevEstagios) =>
+        prevEstagios.map((estagio) =>
+          estagio.id === updatedEstagio.id ? updatedEstagio : estagio
+        )
+      );
+    });
+
+    // Ouve pelo evento "estagio deletado"
+    socket.on('estagio deletado', (id) => {
+      setEstagios((prevEstagios) => prevEstagios.filter((estagio) => estagio.id !== id));
+    });
+
+    // Limpa a conexão ao WebSocket ao desmontar o componente
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
 
 
