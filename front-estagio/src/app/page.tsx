@@ -30,10 +30,11 @@ export default function Estagio() {
   const [highlightedId, setHighlightedId] = useState<number | null>(null); // ID do estágio destacado
 
   // Função para atualizar os campos do formulário
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
+
 
   // Função para atualizar o campo de upload de arquivos
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,26 +47,29 @@ export default function Estagio() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const uploadData = new FormData();
-    uploadData.append("estudante", formData.estudante);
-    uploadData.append("orientador", formData.orientador);
-    uploadData.append("empresa", formData.empresa);
-    uploadData.append("agenteIntegracao", formData.agenteIntegracao);
-    if (formData.pdf) uploadData.append("pdf", formData.pdf);
+    const uploadData = {
+      estudante: formData.estudante,
+      orientador: formData.orientador,
+      empresa: formData.empresa,
+      agenteIntegracao: formData.agenteIntegracao,
+    };
 
     try {
       const response = await fetch("http://localhost:3001/api/estagios", {
         method: "POST",
-        body: uploadData, // Usa FormData
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(uploadData), // Envia os dados no formato JSON
       });
 
       if (response.ok) {
         const novoEstagio = await response.json();
         setMessage("Estágio cadastrado com sucesso!");
         setEstagios((prevEstagios) => [novoEstagio, ...prevEstagios]);
-        setHighlightedId(novoEstagio.id); // Destaque o novo estágio
-        setTimeout(() => setHighlightedId(null), 3000); // Remove destaque após 3 segundos
+        setHighlightedId(novoEstagio.id);
 
+        setTimeout(() => setHighlightedId(null), 3000);
         setFormData({
           estudante: "",
           orientador: "",
@@ -74,12 +78,14 @@ export default function Estagio() {
           pdf: null,
         });
       } else {
-        setMessage("Erro ao cadastrar o estágio. Verifique os dados e tente novamente.");
+        setMessage("Erro ao cadastrar o estágio. Tente novamente.");
       }
     } catch (error) {
-      setMessage("Ocorreu um erro ao enviar os dados. Tente novamente mais tarde.");
+      console.error("Erro ao enviar os dados:", error);
+      setMessage("Erro ao enviar os dados ao servidor.");
     }
   };
+
 
   // Função para buscar os estágios da API
   useEffect(() => {
@@ -170,12 +176,7 @@ export default function Estagio() {
             value={formData.agenteIntegracao}
             onChange={handleChange}
           />
-          <input
-            type="file"
-            name="pdf"
-            accept=".pdf"
-            onChange={handleFileChange}
-          />
+
           <button type="submit">Cadastrar Estágio</button>
         </form>
         {message && <p>{message}</p>}
@@ -214,9 +215,10 @@ export default function Estagio() {
                         Visualizar PDF
                       </a>
                     ) : (
-                      "N/A"
+                      <span>N/A</span>
                     )}
                   </td>
+
                 </tr>
               ))}
             </tbody>

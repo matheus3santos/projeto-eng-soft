@@ -72,7 +72,7 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// Função para enviar o PDF ao Azure Blob
+// Função para enviar o PDF ao Azure Blob e gerar o SAS Token
 router.post('/:id/upload-pdf', upload.single('pdf'), async (req, res) => {
   try {
     const { id } = req.params;
@@ -86,11 +86,27 @@ router.post('/:id/upload-pdf', upload.single('pdf'), async (req, res) => {
       const blobName = `estagios/${Date.now()}-${req.file.originalname}`;
       const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
+      // Fazer o upload do PDF para o Blob Storage
       await blockBlobClient.uploadData(req.file.buffer, {
         blobHTTPHeaders: { blobContentType: req.file.mimetype }
       });
 
-      const pdfUrl = `${containerClient.url}/${blobName}`;
+      // Gerar o token SAS válido por 1 hora
+      const expiryTime = new Date(new Date().valueOf() + 3600 * 1000);
+      const { generateBlobSASQueryParameters, BlobSASPermissions } = require('@azure/storage-blob');
+
+      const sharedKeyCredential = new (require('@azure/storage-blob').StorageSharedKeyCredential)(
+        process.env.AZURE_STORAGE_ACCOUNT_NAME,
+        process.env.AZURE_STORAGE_ACCOUNT_KEY
+      );
+
+      const sasToken = generateBlobSASQueryParameters({
+        containerName,
+        blobName,
+        expiresOn: expiryTime
+      }, sharedKeyCredential).toString();
+
+      const pdfUrl = `${blockBlobClient.url}?${sasToken}`;
 
       estagio.pdfUrl = pdfUrl;
       await estagio.save();
@@ -100,9 +116,10 @@ router.post('/:id/upload-pdf', upload.single('pdf'), async (req, res) => {
       res.status(400).send('Nenhum arquivo enviado');
     }
   } catch (error) {
-    console.error('Erro ao fazer upload:', error);
+    console.error('Erro ao fazer upload:', error.message);
     res.status(500).send('Erro ao enviar o PDF');
   }
 });
+
 
 module.exports = router;
