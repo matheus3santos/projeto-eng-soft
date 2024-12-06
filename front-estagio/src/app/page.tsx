@@ -1,12 +1,10 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import Header from "@/components/headerBar";
 import styles from "./css/estagio.module.css";
-import io, { Socket } from 'socket.io-client'; // Importa o socket.io-client
 import { initializeApp } from "firebase/app";
-import { getDatabase, onValue, ref } from "firebase/database";
-
+import { getDatabase, ref, set } from "firebase/database";
 
 type Estagio = {
   id: number;
@@ -14,244 +12,150 @@ type Estagio = {
   orientador: string;
   empresa: string;
   agenteIntegracao?: string;
-  pdfUrl?: string; // URL do PDF armazenado
+  pdfUrl?: string;
 };
 
 const firebaseConfig = {
-  apiKey: "SUA_API_KEY",
-  authDomain: "SUA_AUTH_DOMAIN",
-  databaseURL: "SUA_DATABASE_URL",
-  projectId: "SEU_PROJECT_ID",
-  storageBucket: "SEU_BUCKET",
-  messagingSenderId: "SUA_MESSAGING_ID",
-  appId: "SEU_APP_ID",
+  apiKey: "AIzaSyDuZ-ddcuwpUqQTB0Sa3Fh52JaeKmg2MBU",
+  authDomain: "eng-soft-ifpe-jab.firebaseapp.com",
+  databaseURL: "https://eng-soft-ifpe-jab-default-rtdb.firebaseio.com",
+  projectId: "eng-soft-ifpe-jab",
+  storageBucket: "eng-soft-ifpe-jab.firebasestorage.app",
+  messagingSenderId: "518714748802",
+  appId: "1:518714748802:web:d2f31ec507fd6d0dec699b",
+  measurementId: "G-SMCJBC3QG3",
 };
 
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
-export const listenToEstagios = (callback: (estagios: Estagio[]) => void) => {
-  const estagiosRef = ref(database, "estagios");
-  onValue(estagiosRef, (snapshot) => {
-    const data = snapshot.val();
-    callback(data ? Object.values(data) : []);
-  });
-};
-
 export default function Estagio() {
-  const [estagios, setEstagios] = useState<Estagio[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    estudante: "",
-    orientador: "",
-    empresa: "",
-    agenteIntegracao: "",
-    pdf: null as File | null, // Armazena o arquivo PDF
-  });
-  const [message, setMessage] = useState("");
-  const [highlightedId, setHighlightedId] = useState<number | null>(null); // ID do estágio destacado
+  const [estagiosMySQL, setEstagiosMySQL] = useState<Estagio[]>([]);
+  const [estagiosFirebase, setEstagiosFirebase] = useState<Estagio[]>([]);
+  const [firebaseData, setFirebaseData] = useState<Estagio>({ id: 0, estudante: "", orientador: "", empresa: "" });
+  const [mysqlData, setMySqlData] = useState<Estagio>({ id: 0, estudante: "", orientador: "", empresa: "" });
 
-  // Função para atualizar os campos do formulário
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
+  const handleAddToFirebase = async () => {
+    try {
+      const newId = Date.now(); // Geração automática de ID (timestamp)
 
+      const firebaseRef = ref(database, `estagios/${newId}`);
+      const newEstagio = { ...firebaseData, id: newId };
 
-  // Função para atualizar o campo de upload de arquivos
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFormData({ ...formData, pdf: e.target.files[0] });
+      await set(firebaseRef, newEstagio);
+      console.log("Estágio adicionado ao Firebase.");
+      setEstagiosFirebase([...estagiosFirebase, newEstagio]);
+    } catch (error) {
+      console.error("Erro no Firebase", error);
     }
   };
 
-  // Função para enviar os dados para a API
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
 
-    const uploadData = {
-      estudante: formData.estudante,
-      orientador: formData.orientador,
-      empresa: formData.empresa,
-      agenteIntegracao: formData.agenteIntegracao,
-    };
-
+  const handleAddToMySQL = async () => {
     try {
       const response = await fetch("http://localhost:3001/api/estagios", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(uploadData), // Envia os dados no formato JSON
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(mysqlData),
       });
-
+  
       if (response.ok) {
-        const novoEstagio = await response.json();
-        setMessage("Estágio cadastrado com sucesso!");
-        setEstagios((prevEstagios) => [novoEstagio, ...prevEstagios]);
-        setHighlightedId(novoEstagio.id);
-
-        setTimeout(() => setHighlightedId(null), 3000);
-        setFormData({
-          estudante: "",
-          orientador: "",
-          empresa: "",
-          agenteIntegracao: "",
-          pdf: null,
-        });
+        const novoEstagio = await response.json(); // Resgata o ID gerado pelo MySQL
+        
+        console.log("Estágio adicionado ao MySQL.");
+        setEstagiosMySQL([...estagiosMySQL, novoEstagio]);
       } else {
-        setMessage("Erro ao cadastrar o estágio. Tente novamente.");
+        console.error("Erro ao adicionar o estágio ao MySQL.");
       }
     } catch (error) {
-      console.error("Erro ao enviar os dados:", error);
-      setMessage("Erro ao enviar os dados ao servidor.");
+      console.error("Erro ao conectar com o MySQL:", error);
     }
   };
+  
 
+  const handleInputChangeFirebase = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFirebaseData({ ...firebaseData, [name]: value });
+  };
 
-  // Função para buscar os estágios da API
-  useEffect(() => {
-    async function fetchEstagios() {
-      try {
-        const response = await fetch("http://localhost:3001/api/estagios");
-        if (!response.ok) {
-          throw new Error("Erro ao buscar estágios");
-        }
-        const data = await response.json();
-        setEstagios(data);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchEstagios();
-  }, []);
-
-  // WebSocket para atualizações em tempo real
-  useEffect(() => {
-    const socket: Socket = io('http://localhost:3001'); // Configura o socket.io
-
-    // Escuta eventos para criação, atualização e exclusão de estágios
-    socket.on('estagio criado', (novoEstagio) => {
-      setEstagios((prevEstagios) => [novoEstagio, ...prevEstagios]);
-    });
-
-    socket.on('estagio atualizado', (updatedEstagio) => {
-      setEstagios((prevEstagios) =>
-        prevEstagios.map((estagio) =>
-          estagio.id === updatedEstagio.id ? updatedEstagio : estagio
-        )
-      );
-    });
-
-    socket.on('estagio deletado', (id) => {
-      setEstagios((prevEstagios) => prevEstagios.filter((estagio) => estagio.id !== id));
-    });
-
-    // Função de limpeza para desconectar o socket ao desmontar o componente
-    return () => {
-      socket.disconnect();
-    };
-  }, []);
-
-  useEffect(() => {
-    listenToEstagios(setEstagios);
-  }, []);
+  const handleInputChangeMySQL = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setMySqlData({ ...mysqlData, [name]: value });
+  };
 
   return (
     <div>
-      <div>
-        <Header />
-      </div>
+      <Header />
+      <h1>Estágios</h1>
 
-      <div style={{ padding: "1rem" }}>
-        <h1>Cadastro de Estágio</h1>
-        <form
-          onSubmit={handleSubmit}
-          style={{ display: "flex", flexDirection: "column", gap: "1rem", maxWidth: "400px" }}
-        >
-          <input
-            type="text"
-            name="estudante"
-            placeholder="Estudante"
-            value={formData.estudante}
-            onChange={handleChange}
-            required
-          />
-          <input
-            type="text"
-            name="orientador"
-            placeholder="Orientador"
-            value={formData.orientador}
-            onChange={handleChange}
-            required
-          />
-          <input
-            type="text"
-            name="empresa"
-            placeholder="Empresa"
-            value={formData.empresa}
-            onChange={handleChange}
-            required
-          />
-          <input
-            type="text"
-            name="agenteIntegracao"
-            placeholder="Agente de Integração"
-            value={formData.agenteIntegracao}
-            onChange={handleChange}
-          />
+      {/* Botões */}
+      <button onClick={handleAddToFirebase}>Cadastrar no Firebase</button>
+      <button onClick={handleAddToMySQL}>Cadastrar no MySQL</button>
 
-          <button type="submit">Cadastrar Estágio</button>
-        </form>
-        {message && <p>{message}</p>}
-      </div>
+      {/* Formulário Firebase */}
+      <h2>Cadastro Firebase</h2>
+      <input placeholder="Estudante" name="estudante" onChange={handleInputChangeFirebase} />
+      <input placeholder="Orientador" name="orientador" onChange={handleInputChangeFirebase} />
+      <input placeholder="Empresa" name="empresa" onChange={handleInputChangeFirebase}/>
+      <input placeholder="Agente de Integração" name="agenteIntegracao" onChange={handleInputChangeFirebase} />
+      
 
-      <div style={{ padding: "1rem" }}>
-        <h1>Lista de Estágios</h1>
-        {loading && <p>Carregando estágios...</p>}
-        {error && <p style={{ color: "red" }}>Erro: {error}</p>}
-        {!loading && !error && (
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Estudante</th>
-                <th>Orientador</th>
-                <th>Empresa</th>
-                <th>Agente de Integração</th>
-                <th>PDF</th>
+      {/* Formulário MySQL */}
+      <h2>Cadastro MySQL</h2>
+      <input placeholder="Estudante" name="estudante" onChange={handleInputChangeMySQL} />
+      <input placeholder="Orientador" name="orientador" onChange={handleInputChangeMySQL} />
+      <input placeholder="Empresa" name="empresa" onChange={handleInputChangeMySQL} />
+      <input placeholder="Agente de Integração" name="agenteIntegracao" onChange={handleInputChangeMySQL} />
+
+      {/* Lista dos Estágios no MySQL */}
+      <h2>Estágios no MySQL</h2>
+      {estagiosMySQL.length > 0 && (
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Estudante</th>
+              <th>Orientador</th>
+              <th>Empresa</th>
+            </tr>
+          </thead>
+          <tbody>
+            {estagiosMySQL.map(estagio => (
+              <tr key={estagio.id}>
+                <td>{estagio.id}</td>
+                <td>{estagio.estudante}</td>
+                <td>{estagio.orientador}</td>
+                <td>{estagio.empresa}</td>
               </tr>
-            </thead>
-            <tbody>
-              {estagios.map((estagio) => (
-                <tr
-                  key={estagio.id}
-                  className={highlightedId === estagio.id ? styles.highlight : ""}
-                >
-                  <td>{estagio.id}</td>
-                  <td>{estagio.estudante}</td>
-                  <td>{estagio.orientador}</td>
-                  <td>{estagio.empresa}</td>
-                  <td>{estagio.agenteIntegracao || "N/A"}</td>
-                  <td>
-                    {estagio.pdfUrl ? (
-                      <a href={estagio.pdfUrl} target="_blank" rel="noopener noreferrer">
-                        Visualizar PDF
-                      </a>
-                    ) : (
-                      <span>N/A</span>
-                    )}
-                  </td>
+            ))}
+          </tbody>
+        </table>
+      )}
 
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      {/* Lista dos Estágios no Firebase */}
+      <h2>Estágios no Firebase</h2>
+      {estagiosFirebase.length > 0 && (
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Estudante</th>
+              <th>Orientador</th>
+              <th>Empresa</th>
+            </tr>
+          </thead>
+          <tbody>
+            {estagiosFirebase.map(estagio => (
+              <tr key={estagio.id}>
+                <td>{estagio.id}</td>
+                <td>{estagio.estudante}</td>
+                <td>{estagio.orientador}</td>
+                <td>{estagio.empresa}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

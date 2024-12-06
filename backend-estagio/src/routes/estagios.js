@@ -20,16 +20,32 @@ const containerClient = blobServiceClient.getContainerClient(containerName);
 
 
 // Rota para criar um novo estágio
-router.post('/', async (req, res) => {
+router.post('/api/estagios', async (req, res) => {
+  const { estudante, orientador, empresa, agenteIntegracao } = req.body;
+
   try {
-    const { estudante, orientador, empresa, agenteIntegracao } = req.body;
-    const novoEstagio = await Estagio.create({ estudante, orientador, empresa, agenteIntegracao });
-    res.status(201).json(novoEstagio);
+    // Insere no MySQL
+    const [result] = await sequelize.query(
+      `INSERT INTO estagios (estudante, orientador, empresa, agenteIntegracao) 
+       VALUES (?, ?, ?, ?)`,
+      { replacements: [estudante, orientador, empresa, agenteIntegracao] }
+    );
 
+    const novoEstagio = {
+      id: result, // ID gerado pelo MySQL
+      estudante,
+      orientador,
+      empresa,
+      agenteIntegracao,
+    };
 
+    // Sincroniza o novo estágio com o Firebase
+    await syncToFirebase(novoEstagio);
+
+    res.status(201).json({ message: 'Estágio criado com sucesso!', estagio: novoEstagio });
   } catch (error) {
     console.error('Erro ao criar estágio:', error);
-    res.status(500).send('Erro ao criar estágio');
+    res.status(500).json({ error: 'Erro ao criar estágio.' });
   }
 });
 
