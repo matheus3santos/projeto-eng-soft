@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Header from "@/components/headerBar";
 import styles from "./css/estagio.module.css";
 import io, { Socket } from 'socket.io-client'; // Importa o socket.io-client
+import { initializeApp } from "firebase/app";
+import { getDatabase, onValue, ref } from "firebase/database";
 
 
 type Estagio = {
@@ -13,6 +15,27 @@ type Estagio = {
   empresa: string;
   agenteIntegracao?: string;
   pdfUrl?: string; // URL do PDF armazenado
+};
+
+const firebaseConfig = {
+  apiKey: "SUA_API_KEY",
+  authDomain: "SUA_AUTH_DOMAIN",
+  databaseURL: "SUA_DATABASE_URL",
+  projectId: "SEU_PROJECT_ID",
+  storageBucket: "SEU_BUCKET",
+  messagingSenderId: "SUA_MESSAGING_ID",
+  appId: "SEU_APP_ID",
+};
+
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
+
+export const listenToEstagios = (callback: (estagios: Estagio[]) => void) => {
+  const estagiosRef = ref(database, "estagios");
+  onValue(estagiosRef, (snapshot) => {
+    const data = snapshot.val();
+    callback(data ? Object.values(data) : []);
+  });
 };
 
 export default function Estagio() {
@@ -131,6 +154,10 @@ export default function Estagio() {
     return () => {
       socket.disconnect();
     };
+  }, []);
+
+  useEffect(() => {
+    listenToEstagios(setEstagios);
   }, []);
 
   return (

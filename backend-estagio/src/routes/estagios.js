@@ -3,6 +3,12 @@ const multer = require('multer');
 const { BlobServiceClient } = require('@azure/storage-blob');
 const dotenv = require('dotenv');
 const { Estagio } = require('../models/Estagio'); // Certifique-se de que o caminho está correto
+const realtimeDB = require("./firebase"); // Importa a instância do Firebase
+const router = express.Router();
+// Configuração do multer
+const upload = multer({ storage: multer.memoryStorage() });
+const { sequelize, syncToFirebase } = require('../database/connection');
+
 
 dotenv.config();
 
@@ -11,10 +17,7 @@ const containerName = 'estagios';
 const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
 const containerClient = blobServiceClient.getContainerClient(containerName);
 
-const router = express.Router();
 
-// Configuração do multer
-const upload = multer({ storage: multer.memoryStorage() });
 
 // Rota para criar um novo estágio
 router.post('/', async (req, res) => {
@@ -22,6 +25,8 @@ router.post('/', async (req, res) => {
     const { estudante, orientador, empresa, agenteIntegracao } = req.body;
     const novoEstagio = await Estagio.create({ estudante, orientador, empresa, agenteIntegracao });
     res.status(201).json(novoEstagio);
+
+
   } catch (error) {
     console.error('Erro ao criar estágio:', error);
     res.status(500).send('Erro ao criar estágio');
