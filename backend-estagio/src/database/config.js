@@ -1,9 +1,18 @@
-const { Sequelize } = require('sequelize');
+// // src/database/config.js
 
-//ALTERAR AQUI O NOME DO BANCO, USUÁRIO E SENHA QUE VOCÊ VAI UTILIZAR
-const sequelize = new Sequelize('estagios_db', 'matheus', '12345', {
-  host: 'localhost',
-  dialect: 'mysql',
-});
+// const Estagio = require('../models/Estagio');
+// const PDFLink = require('../models/PdfLink');
 
-module.exports = sequelize;
+
+// module.exports = {
+//   DB_NAME: 'estagios_db',
+//   DB_USER: 'matheus',
+//   DB_PASSWORD: '12345',
+//   DB_HOST: 'localhost',
+//   DIALECT: 'mysql',
+// };
+
+// Estagio.hasOne(PDFLink, { foreignKey: 'estagioId', onDelete: 'CASCADE' });
+// PDFLink.belongsTo(Estagio, { foreignKey: 'estagioId' });
+
+// module.exports = { Estagio, PDFLink };

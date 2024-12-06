@@ -21,3 +21,8 @@
     background-color: #f9f9f9;
   }
   
+  .highlight {
+    background-color: #d4edda; /* Verde claro */
+    transition: background-color 1s ease;
+  }
+  
