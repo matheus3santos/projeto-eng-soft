@@ -58,10 +58,10 @@ export default function Estagio() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(mysqlData),
       });
-  
+
       if (response.ok) {
         const novoEstagio = await response.json(); // Resgata o ID gerado pelo MySQL
-        
+
         console.log("Estágio adicionado ao MySQL.");
         setEstagiosMySQL([...estagiosMySQL, novoEstagio]);
       } else {
@@ -71,7 +71,7 @@ export default function Estagio() {
       console.error("Erro ao conectar com o MySQL:", error);
     }
   };
-  
+
 
   const handleInputChangeFirebase = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -96,9 +96,9 @@ export default function Estagio() {
       <h2>Cadastro Firebase</h2>
       <input placeholder="Estudante" name="estudante" onChange={handleInputChangeFirebase} />
       <input placeholder="Orientador" name="orientador" onChange={handleInputChangeFirebase} />
-      <input placeholder="Empresa" name="empresa" onChange={handleInputChangeFirebase}/>
+      <input placeholder="Empresa" name="empresa" onChange={handleInputChangeFirebase} />
       <input placeholder="Agente de Integração" name="agenteIntegracao" onChange={handleInputChangeFirebase} />
-      
+
 
       {/* Formulário MySQL */}
       <h2>Cadastro MySQL</h2>
@@ -108,8 +108,8 @@ export default function Estagio() {
       <input placeholder="Agente de Integração" name="agenteIntegracao" onChange={handleInputChangeMySQL} />
 
       {/* Lista dos Estágios no MySQL */}
-      <h2>Estágios no MySQL</h2>
-      {estagiosMySQL.length > 0 && (
+      <h1>Lista de Estágios</h1>
+
         <table className={styles.table}>
           <thead>
             <tr>
@@ -117,20 +117,35 @@ export default function Estagio() {
               <th>Estudante</th>
               <th>Orientador</th>
               <th>Empresa</th>
+              <th>Agente de Integração</th>
+              <th>PDF</th>
             </tr>
           </thead>
           <tbody>
-            {estagiosMySQL.map(estagio => (
-              <tr key={estagio.id}>
+            {estagiosMySQL.map((estagio) => (
+              <tr
+                key={estagio.id}
+              >
                 <td>{estagio.id}</td>
                 <td>{estagio.estudante}</td>
                 <td>{estagio.orientador}</td>
                 <td>{estagio.empresa}</td>
+                <td>{estagio.agenteIntegracao || "N/A"}</td>
+                <td>
+                  {estagio.pdfUrl ? (
+                    <a href={estagio.pdfUrl} target="_blank" rel="noopener noreferrer">
+                      Visualizar PDF
+                    </a>
+                  ) : (
+                    <span>N/A</span>
+                  )}
+                </td>
+
               </tr>
             ))}
           </tbody>
         </table>
-      )}
+
 
       {/* Lista dos Estágios no Firebase */}
       <h2>Estágios no Firebase</h2>
