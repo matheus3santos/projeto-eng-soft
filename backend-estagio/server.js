@@ -1,29 +1,18 @@
-// server.js
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const sequelize = require('./src/database/connection');
+const realtimeDB = require('./src/database/firebaseConfig'); // Importa a configuração do Firebase
 const estagioRoutes = require('./src/routes/estagios');
 
 const app = express();
 const PORT = 3001;
 
-(async () => {
-  try {
-    await sequelize.authenticate();
-    console.log('Banco de dados conectado com sucesso.');
+app.use(bodyParser.json());
+app.use(cors({ origin: "http://localhost:3000" }));
 
-    await sequelize.sync({ alter: true });
-    console.log('Banco de dados sincronizado.');
+// Roteamento para estágios
+app.use('/api/estagios', estagioRoutes);
 
-    app.use(bodyParser.json());
-    app.use(cors({ origin: "http://localhost:3000" }));
-    app.use('/api/estagios', estagioRoutes);
-
-    app.listen(PORT, () => {
-      console.log(`Servidor rodando na porta ${PORT}`);
-    });
-  } catch (error) {
-    console.error('Erro ao conectar ao banco de dados:', error);
-  }
-})();
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
+});

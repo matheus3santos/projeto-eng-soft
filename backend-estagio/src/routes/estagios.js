@@ -1,16 +1,12 @@
-//src/routes/estagios.js
-
 const express = require('express');
 const multer = require('multer');
 const { BlobServiceClient } = require('@azure/storage-blob');
 const dotenv = require('dotenv');
-const { Estagio } = require('../models/Estagio'); // Certifique-se de que o caminho está correto
-const realtimeDB = require("./firebase"); // Importa a instância do Firebase
+const realtimeDB = require('../database/firebaseConfig'); // Importa a instância do Firebase
 const router = express.Router();
+
 // Configuração do multer
 const upload = multer({ storage: multer.memoryStorage() });
-const { sequelize, syncToFirebase } = require('../database/connection');
-
 
 dotenv.config();
 
@@ -19,32 +15,23 @@ const containerName = 'estagios';
 const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
 const containerClient = blobServiceClient.getContainerClient(containerName);
 
-
-
 // Rota para criar um novo estágio
 router.post('/api/estagios', async (req, res) => {
   const { estudante, orientador, empresa, agenteIntegracao } = req.body;
 
   try {
-    // Insere no MySQL
-    const [result] = await sequelize.query(
-      `INSERT INTO estagios (estudante, orientador, empresa, agenteIntegracao) 
-       VALUES (?, ?, ?, ?)`,
-      { replacements: [estudante, orientador, empresa, agenteIntegracao] }
-    );
-
+    // Criação de um novo estágio no Firebase
+    const estagiosRef = realtimeDB.ref('estagios');
     const novoEstagio = {
-      id: result, // ID gerado pelo MySQL
       estudante,
       orientador,
       empresa,
       agenteIntegracao,
+      pdfUrl: null, // Campo para armazenar o link do PDF
     };
 
-    // Sincroniza o novo estágio com o Firebase
-    await syncToFirebase(novoEstagio);
-
-    res.status(201).json({ message: 'Estágio criado com sucesso!', estagio: novoEstagio });
+    const estagioRef = await estagiosRef.push(novoEstagio);
+    res.status(201).json({ message: 'Estágio criado com sucesso!', id: estagioRef.key, ...novoEstagio });
   } catch (error) {
     console.error('Erro ao criar estágio:', error);
     res.status(500).json({ error: 'Erro ao criar estágio.' });
@@ -54,8 +41,20 @@ router.post('/api/estagios', async (req, res) => {
 // Rota para listar todos os estágios
 router.get('/', async (req, res) => {
   try {
-    const estagios = await Estagio.findAll();
-    res.status(200).json(estagios);
+    const estagiosRef = realtimeDB.ref('estagios');
+    const snapshot = await estagiosRef.once('value');
+    const estagios = snapshot.val();
+
+    if (!estagios) {
+      return res.status(404).send('Nenhum estágio encontrado');
+    }
+
+    const estagiosArray = Object.entries(estagios).map(([key, value]) => ({
+      id: key,
+      ...value
+    }));
+
+    res.status(200).json(estagiosArray);
   } catch (error) {
     console.error('Erro ao listar estágios:', error);
     res.status(500).send('Erro ao listar estágios');
@@ -64,19 +63,26 @@ router.get('/', async (req, res) => {
 
 // Rota para atualizar informações do estágio
 router.put('/:id', async (req, res) => {
+  const { id } = req.params;
+  const { estudante, orientador, empresa, agenteIntegracao } = req.body;
+
   try {
-    const { id } = req.params;
-    const { estudante, orientador, empresa, agenteIntegracao } = req.body;
-    const [updated] = await Estagio.update(
-      { estudante, orientador, empresa, agenteIntegracao },
-      { where: { id } }
-    );
-    if (updated) {
-      const updatedEstagio = await Estagio.findByPk(id);
-      res.status(200).json(updatedEstagio);
-    } else {
-      res.status(404).send('Estágio não encontrado');
+    const estagiosRef = realtimeDB.ref(`estagios/${id}`);
+    const snapshot = await estagiosRef.once('value');
+    const estagio = snapshot.val();
+
+    if (!estagio) {
+      return res.status(404).send('Estágio não encontrado');
     }
+
+    await estagiosRef.update({
+      estudante,
+      orientador,
+      empresa,
+      agenteIntegracao,
+    });
+
+    res.status(200).json({ id, estudante, orientador, empresa, agenteIntegracao });
   } catch (error) {
     console.error('Erro ao atualizar estágio:', error);
     res.status(500).send('Erro ao atualizar estágio');
@@ -85,9 +91,18 @@ router.put('/:id', async (req, res) => {
 
 // Rota para excluir um estágio
 router.delete('/:id', async (req, res) => {
+  const { id } = req.params;
+
   try {
-    const { id } = req.params;
-    await Estagio.destroy({ where: { id } });
+    const estagiosRef = realtimeDB.ref(`estagios/${id}`);
+    const snapshot = await estagiosRef.once('value');
+    const estagio = snapshot.val();
+
+    if (!estagio) {
+      return res.status(404).send('Estágio não encontrado');
+    }
+
+    await estagiosRef.remove();
     res.status(200).send('Estágio deletado');
   } catch (error) {
     console.error('Erro ao excluir estágio:', error);
@@ -95,12 +110,15 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// Função para enviar o PDF ao Azure Blob e gerar o SAS Token
+// Função para enviar o PDF ao Azure Blob e atualizar o link no Firebase
 router.post('/:id/upload-pdf', upload.single('pdf'), async (req, res) => {
-  try {
-    const { id } = req.params;
+  const { id } = req.params;
 
-    const estagio = await Estagio.findByPk(id);
+  try {
+    const estagiosRef = realtimeDB.ref(`estagios/${id}`);
+    const snapshot = await estagiosRef.once('value');
+    const estagio = snapshot.val();
+
     if (!estagio) {
       return res.status(404).send('Estágio não encontrado');
     }
@@ -111,28 +129,14 @@ router.post('/:id/upload-pdf', upload.single('pdf'), async (req, res) => {
 
       // Fazer o upload do PDF para o Blob Storage
       await blockBlobClient.uploadData(req.file.buffer, {
-        blobHTTPHeaders: { blobContentType: req.file.mimetype }
+        blobHTTPHeaders: { blobContentType: req.file.mimetype },
       });
 
-      // Gerar o token SAS válido por 1 hora
-      const expiryTime = new Date(new Date().valueOf() + 3600 * 1000);
-      const { generateBlobSASQueryParameters, BlobSASPermissions } = require('@azure/storage-blob');
+      // Gerar o link do PDF
+      const pdfUrl = `${blockBlobClient.url}`;
 
-      const sharedKeyCredential = new (require('@azure/storage-blob').StorageSharedKeyCredential)(
-        process.env.AZURE_STORAGE_ACCOUNT_NAME,
-        process.env.AZURE_STORAGE_ACCOUNT_KEY
-      );
-
-      const sasToken = generateBlobSASQueryParameters({
-        containerName,
-        blobName,
-        expiresOn: expiryTime
-      }, sharedKeyCredential).toString();
-
-      const pdfUrl = `${blockBlobClient.url}?${sasToken}`;
-
-      estagio.pdfUrl = pdfUrl;
-      await estagio.save();
+      // Atualizando o link do PDF no Firebase
+      await estagiosRef.update({ pdfUrl });
 
       res.status(200).json({ message: 'PDF enviado com sucesso', pdfUrl });
     } else {
@@ -143,6 +147,5 @@ router.post('/:id/upload-pdf', upload.single('pdf'), async (req, res) => {
     res.status(500).send('Erro ao enviar o PDF');
   }
 });
-
 
 module.exports = router;

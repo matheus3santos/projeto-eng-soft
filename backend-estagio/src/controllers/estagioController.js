@@ -1,25 +1,29 @@
-//src/controlles/estagioController.js
-
-const Estagio = require('../models/Estagio'); // Certifique-se de que o caminho está correto
-const PDFLink = require('../models/PdfLink'); // Certifique-se de que o caminho está correto
+const { ref } = require('../database/firebaseConfig'); // Certifique-se de que está importando a instância correta do Firebase
 
 const { BlobServiceClient } = require('@azure/storage-blob');
 const dotenv = require('dotenv');
 dotenv.config();
-
-
 
 const AZURE_STORAGE_CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING;
 const containerName = 'estagios';
 const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
 const containerClient = blobServiceClient.getContainerClient(containerName);
 
-
 exports.criarEstagio = async (req, res) => {
   try {
     const { estudante, orientador, empresa, agenteIntegracao } = req.body;
-    const novoEstagio = await Estagio.create({ estudante, orientador, empresa, agenteIntegracao });
-    res.status(201).json(novoEstagio);
+
+    // Criando um novo estágio no Firebase
+    const estagiosRef = ref.child('estagios');
+    const novoEstagio = await estagiosRef.push({
+      estudante,
+      orientador,
+      empresa,
+      agenteIntegracao,
+      pdfUrl: null // Adicionando o campo para o link do PDF
+    });
+
+    res.status(201).json({ id: novoEstagio.key, estudante, orientador, empresa, agenteIntegracao });
   } catch (error) {
     console.error('Erro ao criar estágio:', error);
     res.status(500).send('Erro ao criar estágio');
@@ -28,8 +32,20 @@ exports.criarEstagio = async (req, res) => {
 
 exports.listarEstagios = async (req, res) => {
   try {
-    const estagios = await Estagio.findAll();
-    res.status(200).json(estagios);
+    const estagiosRef = ref.child('estagios');
+    const snapshot = await estagiosRef.once('value');
+    const estagios = snapshot.val();
+
+    if (!estagios) {
+      return res.status(404).send('Nenhum estágio encontrado');
+    }
+
+    const estagiosArray = Object.entries(estagios).map(([key, value]) => ({
+      id: key,
+      ...value
+    }));
+
+    res.status(200).json(estagiosArray);
   } catch (error) {
     console.error('Erro ao listar estágios:', error);
     res.status(500).send('Erro ao listar estágios');
@@ -40,13 +56,19 @@ exports.atualizarEstagio = async (req, res) => {
   try {
     const { id } = req.params;
     const { estudante, orientador, empresa, agenteIntegracao } = req.body;
-    const [updated] = await Estagio.update(
-      { estudante, orientador, empresa, agenteIntegracao },
-      { where: { id } }
-    );
+
+    const estagiosRef = ref.child(`estagios/${id}`);
+
+    // Atualizando o estágio no Firebase
+    const updated = await estagiosRef.update({
+      estudante,
+      orientador,
+      empresa,
+      agenteIntegracao
+    });
+
     if (updated) {
-      const updatedEstagio = await Estagio.findByPk(id);
-      res.status(200).json(updatedEstagio);
+      res.status(200).json({ id, estudante, orientador, empresa, agenteIntegracao });
     } else {
       res.status(404).send('Estágio não encontrado');
     }
@@ -59,7 +81,11 @@ exports.atualizarEstagio = async (req, res) => {
 exports.excluirEstagio = async (req, res) => {
   try {
     const { id } = req.params;
-    await Estagio.destroy({ where: { id } });
+    const estagiosRef = ref.child(`estagios/${id}`);
+
+    // Excluindo o estágio do Firebase
+    await estagiosRef.remove();
+
     res.status(200).send('Estágio deletado');
   } catch (error) {
     console.error('Erro ao excluir estágio:', error);
@@ -71,8 +97,11 @@ exports.excluirEstagio = async (req, res) => {
 exports.uploadPdf = async (req, res) => {
   try {
     const { id } = req.params;
+    const estagiosRef = ref.child(`estagios/${id}`);
 
-    const estagio = await Estagio.findByPk(id);
+    const snapshot = await estagiosRef.once('value');
+    const estagio = snapshot.val();
+
     if (!estagio) {
       return res.status(404).send('Estágio não encontrado');
     }
@@ -87,8 +116,8 @@ exports.uploadPdf = async (req, res) => {
 
       const pdfUrl = `${containerClient.url}/${blobName}`;
 
-      estagio.pdfUrl = pdfUrl;
-      await estagio.save();
+      // Atualizando a URL do PDF no Firebase
+      await estagiosRef.update({ pdfUrl });
 
       res.status(200).json({ message: 'PDF enviado com sucesso', pdfUrl });
     } else {
@@ -99,4 +128,3 @@ exports.uploadPdf = async (req, res) => {
     res.status(500).send('Erro ao enviar o PDF');
   }
 };
-
