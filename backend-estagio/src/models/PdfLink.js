@@ -1,5 +1,6 @@
+//src/models/PdfLink.js
+
 const { DataTypes } = require('sequelize');
-const sequelize = require('../database/connection');
 const { Estagio } = require('./Estagio');  // Importa o modelo Estagio corretamente
 
 const PDFLink = sequelize.define('PDFLink', {

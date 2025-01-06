@@ -1,3 +1,5 @@
+//src/models/index.js
+
 const { Estagio } = require('./Estagio');
 const { PDFLink } = require('./PdfLink');
 

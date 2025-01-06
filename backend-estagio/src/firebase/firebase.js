@@ -1,3 +1,5 @@
+//src/firebase/firebase.js
+
 const admin = require("firebase-admin");
 
 // Insira o arquivo de credenciais gerado no Firebase Console

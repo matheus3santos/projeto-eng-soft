@@ -1,8 +1,5 @@
-//src/controlles/uploadPdf.js é um controller que faz o upload do PDF do estágio para o Azure Blob Storage e salva o link na tabela PDFLinks
-
 const { PDFLink, Estagio } = require("../models");
-const { containerClient } = require('../azure/storage');
-
+const { bucket } = require('../azure/storage');  // Firebase Storage
 
 exports.uploadPdf = async (req, res) => {
   try {
@@ -13,21 +10,33 @@ exports.uploadPdf = async (req, res) => {
 
     if (req.file) {
       const blobName = `estagios/${Date.now()}-${req.file.originalname}`;
-      const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+      const file = bucket.file(blobName);
 
-      await blockBlobClient.uploadData(req.file.buffer, {
-        blobHTTPHeaders: { blobContentType: req.file.mimetype },
+      const stream = file.createWriteStream({
+        metadata: {
+          contentType: req.file.mimetype,
+        },
       });
 
-      const pdfUrl = `${containerClient.url}/${blobName}`;
-
-      // Salvar o link na tabela PDFLinks
-      const linkPdf = await PDFLink.create({
-        estagioId: id,
-        urlPdf: pdfUrl,
+      stream.on('error', (err) => {
+        console.error('Erro ao fazer upload do arquivo:', err);
+        res.status(500).send("Erro ao fazer upload do PDF");
       });
 
-      res.status(200).json({ message: "PDF enviado", pdfUrl });
+      stream.on('finish', async () => {
+        // Arquivo carregado, agora gerar o URL de acesso
+        const pdfUrl = `https://storage.googleapis.com/${bucket.name}/${file.name}`;
+
+        // Salvar o link na tabela PDFLinks
+        await PDFLink.create({
+          estagioId: id,
+          urlPdf: pdfUrl,
+        });
+
+        res.status(200).json({ message: "PDF enviado", pdfUrl });
+      });
+
+      stream.end(req.file.buffer);
     }
   } catch (err) {
     console.error("Erro ao fazer upload do PDF:", err);

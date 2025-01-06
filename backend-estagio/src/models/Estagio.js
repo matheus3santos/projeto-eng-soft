@@ -1,3 +1,5 @@
+//src/models/Estagio.js
+
 const { DataTypes } = require('sequelize');
 const sequelize = require('../database/connection');
 
@@ -9,4 +11,4 @@ const Estagio = sequelize.define('Estagio', {
   pdfUrl: { type: DataTypes.STRING, allowNull: true },
 });
 
-module.exports = { Estagio };  // Exportação correta
+module.exports = {};  // Exportação correta

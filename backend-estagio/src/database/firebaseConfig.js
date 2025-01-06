@@ -1,23 +1,20 @@
-const firebase = require('firebase/app');
-require('firebase/database'); // Realtime Database
+// src/database/firebaseConfig.js
+const admin = require('firebase-admin');
 const dotenv = require('dotenv');
+dotenv.config();
 
-const firebaseConfig = {
-    apiKey: "AIzaSyDuZ-ddcuwpUqQTB0Sa3Fh52JaeKmg2MBU",
-    authDomain: "eng-soft-ifpe-jab.firebaseapp.com",
-    databaseURL: "https://eng-soft-ifpe-jab-default-rtdb.firebaseio.com",
-    projectId: "eng-soft-ifpe-jab",
-    storageBucket: "eng-soft-ifpe-jab.firebasestorage.app",
-    messagingSenderId: "518714748802",
-    appId: "1:518714748802:web:d2f31ec507fd6d0dec699b",
-    measurementId: "G-SMCJBC3QG3"
-  };
-
-// Inicializa o Firebase
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
+// Inicialize o Firebase Admin SDK
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    }),
+    databaseURL: process.env.FIREBASE_DATABASE_URL,
+  });
 }
 
-const database = firebase.database();
+const database = admin.database();
 
 module.exports = database;

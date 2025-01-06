@@ -1,40 +1,18 @@
-// src/azure/storage.js
-
-const { BlobServiceClient, generateBlobSASQueryParameters, BlobSASPermissions } = require('@azure/storage-blob');
+const admin = require('firebase-admin');
 const dotenv = require('dotenv');
-
 
 dotenv.config();
 
-const AZURE_STORAGE_CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING;
-const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME;
-
-
-if (!AZURE_STORAGE_CONNECTION_STRING) {
-  throw new Error('Azure Storage Connection String não configurado.');
+// Inicializando o Firebase Admin
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(require('../firebase/serviceAccountKey.json')),
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+  });
 }
 
-// Conectar ao serviço Blob Storage
-const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
-const containerName = 'pdf-estagios';
-const containerClient = blobServiceClient.getContainerClient(containerName);
-
-const generateSasUrl = async (blobName) => {
-  const expiryTime = new Date(new Date().valueOf() + 3600 * 1000);  // Link válido por 1 hora.
-
-  const blobClient = containerClient.getBlobClient(blobName);
-  const sasToken = generateBlobSASQueryParameters({
-    containerName,
-    blobName,
-    expiresOn: expiryTime,
-  }, blobClient.credential).toString();
-
-  const url = `${blobClient.url}?${sasToken}`;
-  return url;
-};
+const bucket = admin.storage().bucket();
 
 module.exports = {
-  containerClient,
-  generateSasUrl,
+  bucket,
 };
-
