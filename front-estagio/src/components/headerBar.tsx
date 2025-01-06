@@ -8,13 +8,16 @@ const Header = () => {
       <nav>
         <ul className={styles.navList}>
           <li>
-            <Link href="/">Página Inicial</Link>
+            <Link href="/cadastroEstagio">Página Inicial</Link>
           </li>
           <li>
             <Link href="/sobre">Sobre</Link>
           </li>
           <li>
             <Link href="/estagio">Estágios</Link>
+          </li>
+          <li>
+            <Link href="/">Sair</Link>
           </li>
         </ul>
       </nav>

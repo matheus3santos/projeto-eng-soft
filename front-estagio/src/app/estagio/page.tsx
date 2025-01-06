@@ -11,7 +11,7 @@ type Estagio = {
   estudante: string;
   orientador: string;
   empresa: string;
-  agenteIntegracao?: string;
+  agenteIntegracao: string | null;  // Alterado para string | null
   pdfUrl?: string;
 };
 
