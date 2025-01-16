@@ -1,6 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Suas configurações aqui...
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+          { key: "Cross-Origin-Embedder-Policy", value: "credentialless" }, // Mais permissivo que "require-corp"
+        ],
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;

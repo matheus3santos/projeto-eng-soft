@@ -38,6 +38,51 @@ router.post('/api/estagios', async (req, res) => {
   }
 });
 
+// Rota para criar um novo estudante
+router.post('/api/estudante', async (req, res) => {
+  const { nome, orientador, matricula, email } = req.body;
+
+  try {
+    // Criação de um novo estudante no Firebase
+    const estudanteRef = realtimeDB.ref('estudante');
+    const novoEstudante = {
+      nome,
+      orientador,
+      matricula,
+      email,
+    };
+
+    const novoEstudanteRef = await estudanteRef.push(novoEstudante);
+    res.status(201).json({ message: 'Estudante cadastrado com sucesso!', id: novoEstudanteRef.key, ...novoEstudante });
+  } catch (error) {
+    console.error('Erro ao criar Estudante:', error);
+    res.status(500).json({ error: 'Erro ao criar Estudante.' });
+  }
+});
+
+// Rota para criar um novo orientador
+router.post('/api/orientador', async (req, res) => {
+  const { nome, email, telefone } = req.body;
+
+  try {
+    // Criação de um novo orientador no Firebase
+    const orientadorRef = realtimeDB.ref('orientador');
+    const novoOrientador = {
+      nome,
+      email,
+      telefone,
+    };
+
+    const novoOrientadorRef = await orientadorRef.push(novoOrientador);
+    res.status(201).json({ message: 'Orientador cadastrado com sucesso!', id: novoOrientadorRef.key, ...novoOrientador });
+  } catch (error) {
+    console.error('Erro ao criar Orientador:', error);
+    res.status(500).json({ error: 'Erro ao criar Orientador.' });
+  }
+});
+
+
+
 // Rota para listar todos os estágios
 router.get('/', async (req, res) => {
   try {

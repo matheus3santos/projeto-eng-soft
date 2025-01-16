@@ -1,5 +1,5 @@
 // src/components/Header.tsx
-import styles from "../app/css/header.module.css"; // Ou o caminho correto para o seu arquivo de estilos
+import styles from "../css/header.module.css"; // Ou o caminho correto para o seu arquivo de estilos
 import Link from "next/link";
 
 const Header = () => {
@@ -8,16 +8,16 @@ const Header = () => {
       <nav>
         <ul className={styles.navList}>
           <li>
-            <Link href="/cadastroEstagio">Página Inicial</Link>
+            <Link href="/admin-dashboard/cadastroEstagio">Página Inicial</Link>
           </li>
           <li>
-            <Link href="/sobre">Sobre</Link>
+            <Link href="/admin-dashboard/sobre">Sobre</Link>
           </li>
           <li>
-            <Link href="/estagio">Estágios</Link>
+            <Link href="/admin-dashboard/estagio">Estágios</Link>
           </li>
           <li>
-            <Link href="/">Sair</Link>
+            <Link href="/admin-dashboard/">Sair</Link>
           </li>
         </ul>
       </nav>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import styles from "../css/page.module.css";
+import styles from "../../../css/estagio.module.css";
 import Header from "@/components/headerBar";
 
 export default function Sobre() {
