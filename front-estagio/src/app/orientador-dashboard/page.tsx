@@ -2,18 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Header from "@/components/headerBar";
-import EditForm from "@/components/editForm";
 import styles from "../../css/estagio.module.css";
+import { useRouter } from 'next/router';
+import { auth } from "../../../config/FirebaseConfig";
 
-type Estudante = {
-  id: string;
-  nome: string;
-};
 
-type Orientador = {
-  id: string;
-  nome: string;
-};
 
 type Estagio = {
   id: string;
@@ -37,7 +30,7 @@ export default function Estagio() {
   const [estagios, setEstagios] = useState<EstagioDisplay[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editingEstagio, setEditingEstagio] = useState<EstagioDisplay | null>(null);
+
 
   async function fetchData() {
     try {

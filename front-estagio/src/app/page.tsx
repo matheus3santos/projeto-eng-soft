@@ -1,175 +1,117 @@
+// pages/login.tsx
 'use client';
 
-import React, { useState } from "react";
-import Link from "next/link";
-import { initializeApp } from "firebase/app";
-import {
-  getAuth,
-  signInWithPopup,
-  GoogleAuthProvider,
-  signOut,
-  onAuthStateChanged,
-} from "firebase/auth";
-
-// Configuração Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyDuZ-ddcuwpUqQTB0Sa3Fh52JaeKmg2MBU",
-  authDomain: "eng-soft-ifpe-jab.firebaseapp.com",
-  projectId: "eng-soft-ifpe-jab",
-  storageBucket: "eng-soft-ifpe-jab.appspot.com",
-  messagingSenderId: "518714748802",
-  appId: "1:518714748802:web:d2f31ec507fd6d0dec699b",
-  measurementId: "G-SMCJBC3QG3",
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { GoogleAuthProvider } from "firebase/auth";
+import { auth,app } from "../../config/FirebaseConfig";
+import { useRouter } from "next/navigation"; // Para redirecionar após login
 
 export default function Login() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter(); // Redirecionamento após login bem-sucedido
 
-  const [email, setEmail] = useState("");
-  const [user, setUser] = useState<any>(null);
-
-  React.useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const handleGoogleLogin = async () => {
-    const provider = new GoogleAuthProvider();
-
-    // Permitir que o usuário escolha a conta manualmente
-    provider.setCustomParameters({ prompt: "select_account" });
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault(); // Previne o comportamento padrão do formulário
 
     try {
-      const result = await signInWithPopup(auth, provider);
-      const loggedInUser = result.user;
-
-      // Verificar o email digitado em comparação ao email autenticado
-      if (loggedInUser.email !== email) {
-        alert("O email digitado não corresponde ao email autenticado.");
-        await signOut(auth);
-        setUser(null);
-        return;
-      }
-
-      // Redirecionar com base no tipo de conta
-      if (email === "admin@example.com") {
-        alert("Bem-vindo, Admin!");
-        window.location.href = "/admin-dashboard";
-      } else if (email.endsWith("@orientador.com")) {
-        alert("Bem-vindo, Orientador!");
-        window.location.href = "/orientador-dashboard";
-      } else {
-        alert("Acesso não autorizado.");
-        await signOut(auth);
-        setUser(null);
-      }
-    } catch (error: any) {
-      if (error.code === "auth/popup-closed-by-user") {
-        console.log("O usuário fechou o pop-up de login antes de concluir.");
-      } else {
-        console.error("Erro ao fazer login com Google:", error);
-      }
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      setUser(null);
-    } catch (error) {
-      console.error("Erro ao fazer logout:", error);
+      await signInWithEmailAndPassword(auth, email, password);
+      router.push('/orientador-dashboard'); // Redireciona após login
+    } catch (err: any) {
+      setError(err.message); // Exibe erro caso ocorra
     }
   };
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.title}>Login</h2>
-      {user ? (
-        <div>
-          <p>Bem-vindo, {user.displayName}</p>
-          <button onClick={handleLogout} style={styles.button}>
-            Logout
-          </button>
+      <h1 style={styles.title}>Login</h1>
+      <form onSubmit={handleLogin} style={styles.form}>
+        <div style={styles.inputGroup}>
+          <label htmlFor="email" style={styles.label}>E-mail</label>
+          <input
+            type="email"
+            id="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={styles.input}
+            required
+          />
         </div>
-      ) : (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleGoogleLogin();
-          }}
-          style={styles.form}
-        >
-          <div style={styles.inputGroup}>
-            <label htmlFor="email" style={styles.label}>
-              E-mail
-            </label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={styles.input}
-              required
-            />
-          </div>
-          <button type="submit" style={styles.button}>
-            Login com Google
-          </button>
-        </form>
-      )}
+        <div style={styles.inputGroup}>
+          <label htmlFor="password" style={styles.label}>Senha</label>
+          <input
+            type="password"
+            id="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={styles.input}
+            required
+          />
+        </div>
+        {error && <p style={styles.error}>{error}</p>}
+        <button type="submit" style={styles.button}>Entrar</button>
+      </form>
+      <p>Não tem uma conta? <Link href="/cadastro" style={styles.link}>Cadastre-se</Link></p>
     </div>
   );
-};
+}
 
-
-const styles: { [key: string]: React.CSSProperties } = {
+const styles = {
   container: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    height: "100vh",
-    backgroundColor: "#f5f5f5",
-    padding: "20px",
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100vh',
+    backgroundColor: '#f5f5f5',
   },
   title: {
-    fontSize: "24px",
-    marginBottom: "20px",
+    fontSize: '24px',
+    marginBottom: '20px',
   },
   form: {
-    width: "100%",
-    maxWidth: "400px",
-    background: "#fff",
-    padding: "20px",
-    borderRadius: "8px",
-    boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
+    width: '100%',
+    maxWidth: '400px',
+    background: '#fff',
+    padding: '20px',
+    borderRadius: '8px',
+    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+    margin: '10px'
   },
   inputGroup: {
-    marginBottom: "15px",
+    marginBottom: '15px',
   },
   label: {
-    display: "block",
-    marginBottom: "5px",
-    fontWeight: "bold",
+    display: 'block',
+    marginBottom: '5px',
+    fontWeight: 'bold',
   },
   input: {
-    width: "100%",
-    padding: "10px",
-    border: "1px solid #ddd",
-    borderRadius: "4px",
+    width: '100%',
+    padding: '10px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
   },
   button: {
-    width: "100%",
-    padding: "10px",
-    backgroundColor: "#4CAF50",
-    color: "#fff",
-    border: "none",
-    borderRadius: "4px",
-    cursor: "pointer",
-    fontSize: "16px",
+    width: '100%',
+    padding: '10px',
+    backgroundColor: '#4CAF50',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '16px',
+  },
+  link: {
+    padding: '5px',
+    color: '#4CAF50',
+    textDecoration: 'none',
+  },
+  error: {
+    color: 'red',
+    marginTop: '10px',
   },
 };
