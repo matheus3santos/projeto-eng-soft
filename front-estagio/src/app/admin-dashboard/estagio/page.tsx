@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Header from "@/components/headerBar";
 import EditForm from "@/components/editForm";
 import styles from "../../../css/estagio.module.css";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { authStorage, appStorage } from "../../../../config/FirebaseConfig";
 
 type Estudante = {
   id: string;
@@ -38,6 +40,7 @@ export default function Estagio() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingEstagio, setEditingEstagio] = useState<EstagioDisplay | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   async function fetchData() {
     try {
@@ -131,6 +134,51 @@ export default function Estagio() {
     setEditingEstagio(null);
   };
 
+  const handlePDFUpload = async (event: React.ChangeEvent<HTMLInputElement>, estagioId: string) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+
+    // Usando o Firebase Storage da conta de armazenamento
+    const storage = getStorage(appStorage); // Passa a instância correta do appStorage
+    const storageRef = ref(storage, `estagios/${estagioId}/${file.name}`);
+
+    try {
+      // Upload do arquivo para o Firebase Storage
+      await uploadBytes(storageRef, file);
+
+      // Obter a URL do arquivo no Firebase Storage
+      const fileUrl = await getDownloadURL(storageRef);
+
+      // Atualizar o estágio no Firebase Realtime Database (usando a conta do banco de dados)
+      const updateRef = `https://eng-soft-ifpe-jab-default-rtdb.firebaseio.com/estagios/${estagioId}.json`;
+      await fetch(updateRef, {
+        method: "PATCH",
+        body: JSON.stringify({ pdfUrl: fileUrl }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      // Atualizar a lista de estágios no estado local
+      setEstagios((prevEstagios) =>
+        prevEstagios.map((e) =>
+          e.id === estagioId
+            ? {
+              ...e,
+              pdfUrl: fileUrl,
+            }
+            : e
+        )
+      );
+    } catch (error) {
+      console.error("Erro ao enviar o PDF:", error);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+
+
   return (
     <div>
       <Header />
@@ -149,6 +197,7 @@ export default function Estagio() {
                 <th>Orientador</th>
                 <th>Empresa</th>
                 <th>Agente Integração</th>
+                <th>PDF</th>
                 <th>Ações</th>
               </tr>
             </thead>
@@ -160,6 +209,21 @@ export default function Estagio() {
                   <td>{estagio.orientador}</td>
                   <td>{estagio.empresa}</td>
                   <td>{estagio.agenteIntegracao || "N/A"}</td>
+                  <td>
+                    {estagio.pdfUrl ? (
+                      <a href={estagio.pdfUrl} target="_blank" rel="noopener noreferrer">
+                        Ver PDF
+                      </a>
+                    ) : (
+                      <>
+                        <input
+                          type="file"
+                          accept="application/pdf"
+                          onChange={(e) => handlePDFUpload(e, estagio.id)}
+                        />
+                      </>
+                    )}
+                  </td>
                   <td>
                     <button onClick={() => handleEdit(estagio)}>Editar</button>
                     <button onClick={() => handleDelete(estagio.id)}>Deletar</button>

@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, browserLocalPersistence, setPersistence } from "firebase/auth";
 
 // Configuração Firebase
@@ -12,11 +12,26 @@ const firebaseConfig = {
   measurementId: "G-SMCJBC3QG3",
 };
 
-// Inicializando o Firebase
-const app = initializeApp(firebaseConfig);
+const firebaseConfigStorage = {
+  apiKey: "AIzaSyAx5D5PeFmbRFb5suBmzzDd1O1LYEx05gg",
+  authDomain: "storage-app-111a9.firebaseapp.com",
+  projectId: "storage-app-111a9",
+  storageBucket: "storage-app-111a9.appspot.com",
+  messagingSenderId: "893078971400",
+  appId: "1:893078971400:web:efaffc4b5a687bf1b2ddbd",
+  measurementId: "G-Q4C0XS8F7B"
+};
 
-// Inicializando a autenticação com persistência no navegador
+// Inicializando o Firebase App para Banco de Dados e Autenticação
+const app = getApps().find((app) => app.name === "[DEFAULT]") || initializeApp(firebaseConfig);
+
+// Inicializando o Firebase App para Storage
+const appStorage =
+  getApps().find((app) => app.name === "storageApp") || initializeApp(firebaseConfigStorage, "storageApp");
+
+// Inicializando os serviços de autenticação
 const auth = getAuth(app);
+const authStorage = getAuth(appStorage);
 
 
-export { app, auth };
+export { app, auth, appStorage, authStorage };
