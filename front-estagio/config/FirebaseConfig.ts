@@ -18,9 +18,5 @@ const app = initializeApp(firebaseConfig);
 // Inicializando a autenticação com persistência no navegador
 const auth = getAuth(app);
 
-// Definindo a persistência
-setPersistence(auth, browserLocalPersistence).catch((error) => {
-  console.error("Erro ao configurar a persistência de autenticação:", error);
-});
 
 export { app, auth };

@@ -5,6 +5,8 @@ import Header from "@/components/headerBar";
 import styles from "../../../css/estagio.module.css";
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, set, get, remove } from "firebase/database";
+import { app, auth } from "../../../../config/FirebaseConfig";
+
 
 type Estudante = {
   id: string;
@@ -30,18 +32,17 @@ type Estagio = {
   pdfUrl?: string;
 };
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDuZ-ddcuwpUqQTB0Sa3Fh52JaeKmg2MBU",
-  authDomain: "eng-soft-ifpe-jab.firebaseapp.com",
-  databaseURL: "https://eng-soft-ifpe-jab-default-rtdb.firebaseio.com",
-  projectId: "eng-soft-ifpe-jab",
-  storageBucket: "eng-soft-ifpe-jab.firebasestorage.app",
-  messagingSenderId: "518714748802",
-  appId: "1:518714748802:web:d2f31ec507fd6d0dec699b",
-  measurementId: "G-SMCJBC3QG3",
-};
+// const firebaseConfig = {
+//   apiKey: "AIzaSyDuZ-ddcuwpUqQTB0Sa3Fh52JaeKmg2MBU",
+//   authDomain: "eng-soft-ifpe-jab.firebaseapp.com",
+//   databaseURL: "https://eng-soft-ifpe-jab-default-rtdb.firebaseio.com",
+//   projectId: "eng-soft-ifpe-jab",
+//   storageBucket: "eng-soft-ifpe-jab.firebasestorage.app",
+//   messagingSenderId: "518714748802",
+//   appId: "1:518714748802:web:d2f31ec507fd6d0dec699b",
+//   measurementId: "G-SMCJBC3QG3",
+// };
 
-const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
 export default function Estagio() {

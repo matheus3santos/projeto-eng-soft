@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import Header from "@/components/headerBar";
 import styles from "../../css/estagio.module.css";
-import { useRouter } from 'next/router';
-import { auth } from "../../../config/FirebaseConfig";
 
 
 

@@ -1,27 +1,38 @@
-// pages/login.tsx
 'use client';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { GoogleAuthProvider } from "firebase/auth";
-import { auth,app } from "../../config/FirebaseConfig";
-import { useRouter } from "next/navigation"; // Para redirecionar após login
+import { signInWithEmailAndPassword, getAuth, GoogleAuthProvider, signInWithPopup, GithubAuthProvider } from "firebase/auth";
+import { auth } from "../../config/FirebaseConfig";
+import { useRouter } from "next/navigation";
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter(); // Redirecionamento após login bem-sucedido
+  const router = useRouter();
 
+
+  // Login com Email e Senha
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); // Previne o comportamento padrão do formulário
-
+    e.preventDefault();
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push('/orientador-dashboard'); // Redireciona após login
+      router.push('/orientador-dashboard');
     } catch (err: any) {
-      setError(err.message); // Exibe erro caso ocorra
+      setError(err.message);
+    }
+  };
+
+  // Login com Google
+  const handleGoogleLogin = async () => {
+    const provider = new GoogleAuthProvider();
+
+    try {
+      await signInWithPopup(auth, provider);
+      router.push('/admin-dashboard/cadastroEstagio'); // Redireciona após login bem-sucedido
+    } catch (err: any) {
+      setError(err.message);
     }
   };
 
@@ -54,6 +65,11 @@ export default function Login() {
         {error && <p style={styles.error}>{error}</p>}
         <button type="submit" style={styles.button}>Entrar</button>
       </form>
+
+      <button onClick={handleGoogleLogin} style={styles.googleButton}>
+        Entrar com Google
+      </button>
+      
       <p>Não tem uma conta? <Link href="/cadastro" style={styles.link}>Cadastre-se</Link></p>
     </div>
   );
@@ -104,6 +120,18 @@ const styles = {
     borderRadius: '4px',
     cursor: 'pointer',
     fontSize: '16px',
+    marginBottom: '10px',
+  },
+  googleButton: {
+    width: '20%',
+    padding: '10px',
+    backgroundColor: '#DB4437',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '16px',
+    marginBottom: '10px',
   },
   link: {
     padding: '5px',
